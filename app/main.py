@@ -1,3 +1,4 @@
+from typing import Optional
 from fastapi import FastAPI, Depends, HTTPException
 from sqlalchemy.orm import Session
 from app import models, schemas
@@ -39,10 +40,27 @@ def get_amimal(animal_id: int, db: Session = Depends(get_db)):
 
 
 @app.get("/animals", response_model=list[schemas.AnimalOut])
-def get_all_animals(db: Session = Depends(get_db)):
-    db_animals = db.query(models.Animal).all()
+def list_animals(species: Optional[str] = None,
+                 breed: Optional[str] = None,
+                 status: Optional[str] = None,
+                 age_min :Optional[str] = None,
+                 age_max: Optional[str] = None,
+                 skip:int = 0,
+                 limit: int = 20,
+                 db: Session = Depends(get_db)):
     
-    return db_animals
+    db_animals = db.query(models.Animal)
+
+    if species:
+        query = query.filter(models.Animal.species == species)
+    if status:
+        query = query.filter(models.Animal.status == status)
+    if age_min is not None:
+        query = query.filter(models.Animal.age >= age_min)
+    if age_max is not None:
+        query = query.filter(models.Animal.age <= age_max)
+    
+     return query.offset(skip).limit(limit).all()
 
 @app.put("/animal/{animal_id}", response_model = schemas.AnimalOut)
 def update_animal(animal_id: int,animal: schemas.AnimalCreate, db: Session = Depends(get_db)):
