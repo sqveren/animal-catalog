@@ -1,6 +1,7 @@
 from pydantic import BaseModel
 from datetime import date
 from typing import Optional
+from datetime import datetime
 
 
 class AnimalCreate(BaseModel):
@@ -18,3 +19,32 @@ class AnimalOut(AnimalCreate):
 
     class Config:
         from_attributes = True
+
+
+class AdopterCreate(BaseModel):
+    first_name: str
+    last_name: str
+    email: str
+    phone_number: Optional[str] = None
+
+
+class AdopterOut(AdopterCreate):
+    id: int
+    registered_at: datetime
+
+    class Config:
+        from_attributes = True
+
+class AdoptionCreate(BaseModel):
+    animal_id: int
+    adopter_id: int
+
+class AdoptionOut(AdoptionCreate):
+    id: int
+    adoption_time: datetime
+    status:str
+
+    class Config:
+        from_attributes = True
+    
+
