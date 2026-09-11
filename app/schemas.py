@@ -5,10 +5,10 @@ from typing import Optional
 
 class AnimalCreate(BaseModel):
     name: str
-    species = str
-    breed = Optional[str] = None
+    species:  str
+    breed: Optional[str] = None
     age: Optional[int] = None
-    arrival_date = date
+    arrival_date: date
     description: Optional[str] = None
 
 

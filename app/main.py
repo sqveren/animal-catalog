@@ -49,7 +49,7 @@ def list_animals(species: Optional[str] = None,
                  limit: int = 20,
                  db: Session = Depends(get_db)):
     
-    db_animals = db.query(models.Animal)
+    query = db.query(models.Animal)
 
     if species:
         query = query.filter(models.Animal.species == species)
@@ -60,7 +60,8 @@ def list_animals(species: Optional[str] = None,
     if age_max is not None:
         query = query.filter(models.Animal.age <= age_max)
     
-     return query.offset(skip).limit(limit).all()
+    return query.offset(skip).limit(limit).all()
+
 
 @app.put("/animal/{animal_id}", response_model = schemas.AnimalOut)
 def update_animal(animal_id: int,animal: schemas.AnimalCreate, db: Session = Depends(get_db)):
