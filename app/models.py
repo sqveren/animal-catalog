@@ -1,5 +1,5 @@
 from app.database import Base
-from sqlalchemy import Column, DateTime, ForeignKey, Integer, String, Date, func
+from sqlalchemy import Column, DateTime, ForeignKey, Integer, String, Date, Float, func
 from sqlalchemy.orm import relationship
 
 
@@ -14,8 +14,10 @@ class Animal(Base):
     status = Column(String, default="available",nullable=False)
     arrival_date = Column(Date, nullable=False)
     description = Column(String, nullable=True)
+    weight = Column(Float, nullable=True)
 
     adoptions = relationship("Adoption", back_populates="animal")
+
     
 
 class Adopter(Base):

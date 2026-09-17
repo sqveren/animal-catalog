@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 from app import models, schemas
 from app.database import engine, SessionLocal, Base
 
-Base.metadata.create_all(bind=engine)
+# Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="Pet Catalog API")
 
@@ -144,7 +144,7 @@ def create_adoption(adoption: schemas.AdoptionCreate, db: Session = Depends(get_
         raise HTTPException(status_code=404, detail = "Adopter not found")
     
     if db_animal.status != "available":
-        raise HTTPException(status_code=404, detail = "Animal is not available")
+        raise HTTPException(status_code=400, detail = "Animal is not available")
     
     db_adopter = db.query(models.Adopter).filter(models.Adopter.id == adoption.adopter_id).first()
     if db_adopter is None:
