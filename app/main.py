@@ -2,7 +2,7 @@ from typing import Optional
 from fastapi import FastAPI, Depends, HTTPException
 from sqlalchemy.orm import Session
 from app import models, schemas
-from app.database import engine, SessionLocal, Base
+from app.database import engine, SessionLocal, Base, get_db
 
 # Base.metadata.create_all(bind=engine)
 
