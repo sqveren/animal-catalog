@@ -1,8 +1,9 @@
 from typing import Optional
 from fastapi import FastAPI, Depends, HTTPException
+from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
-from app import models, schemas
-from app.database import engine, SessionLocal, Base, get_db
+from app import models, schemas, auth
+from app.database import engine, SessionLocal, Base
 
 # Base.metadata.create_all(bind=engine)
 
@@ -16,13 +17,28 @@ def get_db():
         db.close()
 
 
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
+
+def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
+    payload = auth.decode_access_token(token)
+    if payload is None:
+        raise HTTPException(status_code=401, detail="Invalid or expired token")
+    
+    username = payload.get("sub")
+    db_user = db.query(models.User).filter(models.User.username == username).first()
+    if db_user is None:
+        raise HTTPException(status_code=401, detail="User not found")
+
+    return db_user
+
+
 @app.get("/")
 def read_root():
     return {"message":"Pet catalog API works"}
 
 
 @app.post("/animals", response_model=schemas.AnimalOut, status_code=201)
-def create_animal(animal: schemas.AnimalCreate, db: Session = Depends(get_db)):
+def create_animal(animal: schemas.AnimalCreate, db: Session = Depends(get_db),current_user: models.User = Depends(get_current_user)):
     db_animal = models.Animal(**animal.model_dump())
     db.add(db_animal)
     db.commit()
@@ -31,7 +47,7 @@ def create_animal(animal: schemas.AnimalCreate, db: Session = Depends(get_db)):
 
 
 @app.get("/animals/{animal_id}", response_model =schemas.AnimalOut)
-def get_amimal(animal_id: int, db: Session = Depends(get_db)):
+def get_animal(animal_id: int, db: Session = Depends(get_db)):
     db_animal = db.query(models.Animal).filter(models.Animal.id == animal_id).first()
 
     if db_animal is None:
@@ -66,7 +82,7 @@ def list_animals(species: Optional[str] = None,
 
 
 @app.put("/animals/{animal_id}", response_model = schemas.AnimalOut)
-def update_animal(animal_id: int,animal: schemas.AnimalCreate, db: Session = Depends(get_db)):
+def update_animal(animal_id: int,animal: schemas.AnimalCreate, db: Session = Depends(get_db),current_user: models.User = Depends(get_current_user)):
     db_animal = db.query(models.Animal).filter(models.Animal.id == animal_id).first()
     if db_animal is None:
         raise HTTPException(status_code=404, detail = "Animal not found")
@@ -81,7 +97,7 @@ def update_animal(animal_id: int,animal: schemas.AnimalCreate, db: Session = Dep
     
 
 @app.delete("/animals/{animal_id}", status_code=204)
-def delete_animal(animal_id: int, db: Session = Depends(get_db)):
+def delete_animal(animal_id: int, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
     db_animal = db.query(models.Animal).filter(models.Animal.id == animal_id).first()
     if db_animal is None:
         raise HTTPException(status_code=404, detail = "Animal not found")
@@ -95,11 +111,11 @@ def get_adopter(adopter_id: int, db: Session = Depends(get_db)):
     db_adopter = db.query(models.Adopter).filter(models.Adopter.id == adopter_id).first()
 
     if db_adopter is None:
-        raise HTTPException(status_code=404, detail = "Animal not found")
+        raise HTTPException(status_code=404, detail = "Adopter not found")
     return db_adopter
 
 @app.post("/adopters", response_model=schemas.AdopterOut, status_code=201)
-def create_adopter(adopter: schemas.AdopterCreate, db: Session = Depends(get_db)):
+def create_adopter(adopter: schemas.AdopterCreate, db: Session = Depends(get_db),current_user: models.User = Depends(get_current_user)):
     db_adopter = models.Adopter(**adopter.model_dump())
     db.add(db_adopter)
     db.commit()
@@ -112,7 +128,7 @@ def list_adopters(db: Session = Depends(get_db)):
 
 
 @app.put("/adopters/{adopter_id}", response_model=schemas.AdopterOut)
-def update_adopter(adopter_id: int, adopter: schemas.AdopterCreate, db: Session = Depends(get_db)):
+def update_adopter(adopter_id: int, adopter: schemas.AdopterCreate, db: Session = Depends(get_db),current_user: models.User = Depends(get_current_user)):
     db_adopter = db.query(models.Adopter).filter(models.Adopter.id == adopter_id).first()
 
     if db_adopter is None:
@@ -127,7 +143,7 @@ def update_adopter(adopter_id: int, adopter: schemas.AdopterCreate, db: Session 
 
 
 @app.delete("/adopters/{adopter_id}",status_code=204)
-def delete_adopter(adopter_id: int, db: Session = Depends(get_db)):
+def delete_adopter(adopter_id: int, db: Session = Depends(get_db),current_user: models.User = Depends(get_current_user)):
     db_adopter = db.query(models.Adopter).filter(models.Adopter.id == adopter_id).first()
     if db_adopter is None:
         raise HTTPException(status_code=404, detail = "Adopter not found")
@@ -137,11 +153,11 @@ def delete_adopter(adopter_id: int, db: Session = Depends(get_db)):
 
 
 @app.post("/adoptions", response_model = schemas.AdoptionOut, status_code=201)
-def create_adoption(adoption: schemas.AdoptionCreate, db: Session = Depends(get_db)):
+def create_adoption(adoption: schemas.AdoptionCreate, db: Session = Depends(get_db),current_user: models.User = Depends(get_current_user)):
     db_animal = db.query(models.Animal).filter(models.Animal.id == adoption.animal_id).first()
 
     if db_animal is None:
-        raise HTTPException(status_code=404, detail = "Adopter not found")
+        raise HTTPException(status_code=404, detail = "Animal not found")
     
     if db_animal.status != "available":
         raise HTTPException(status_code=400, detail = "Animal is not available")
@@ -158,3 +174,31 @@ def create_adoption(adoption: schemas.AdoptionCreate, db: Session = Depends(get_
     db.commit()
     db.refresh(db_adoption)
     return db_adoption
+
+
+@app.post("/auth/register", response_model= schemas.UserOut, status_code=201)
+def register(user: schemas.UserCreate, db: Session = Depends(get_db)):
+    existing_user = db.query(models.User).filter(models.User.username == user.username).first()
+    if existing_user:
+        raise HTTPException(status_code=400, detail="User already exist")
+    
+    db_user = models.User(
+        username = user.username,
+        hashed_password = auth.hash_password(user.password)
+    )
+
+    db.add(db_user)
+    db.commit()
+    db.refresh(db_user)
+    return db_user
+
+@app.post("/auth/login", response_model=schemas.Token)
+def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
+    db_user = db.query(models.User).filter(models.User.username == form_data.username).first()
+
+    if not db_user or not auth.verify_password(form_data.password, db_user.hashed_password):
+        raise HTTPException(status_code=401, detail="Incorrect username or password")
+    
+
+    access_token = auth.create_access_token(data={"sub":db_user.username})
+    return {"access_token": access_token, "token_type": "bearer"}

@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from datetime import date
 from typing import Optional
 from datetime import datetime
@@ -46,5 +46,21 @@ class AdoptionOut(AdoptionCreate):
 
     class Config:
         from_attributes = True
+
+
+class UserCreate(BaseModel):
+    username: str
+    password: str
+
+class UserOut(UserCreate):
+    id: int
+    username: str
+
+    class Config:
+        from_attributes = True
+
     
+class Token(BaseModel):
+    access_token: str
+    token_type: str
 
