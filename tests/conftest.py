@@ -5,8 +5,8 @@ from sqlalchemy.pool import StaticPool
 from fastapi.testclient import TestClient
 from app import models, auth
 
-from app.main import app, get_db
-from app.database import Base
+from app.main import app
+from app.database import Base, get_db
 
 SQLALCHEMY_TEST_DATABASE_URL = "sqlite:///:memory:"
 
