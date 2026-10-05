@@ -3,6 +3,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 from fastapi.testclient import TestClient
+from app import models, auth
 
 from app.main import app, get_db
 from app.database import Base
@@ -37,7 +38,15 @@ def client():
 
 @pytest.fixture
 def auth_headers(client):
-    client.post("/auth/register", json={"username": "admin", "password": "admin"})
+    db = TestingSessionLocal()
+    user = models.User(
+        username="admin",
+        hashed_password=auth.hash_password("admin")
+    )
+    db.add(user)
+    db.commit()
+    db.close()
+    
     response = client.post(
         "/auth/login",
         data={"username": "admin", "password": "admin"},
