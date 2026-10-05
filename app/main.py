@@ -177,7 +177,7 @@ def create_adoption(adoption: schemas.AdoptionCreate, db: Session = Depends(get_
 
 
 @app.post("/auth/register", response_model= schemas.UserOut, status_code=201)
-def register(user: schemas.UserCreate, db: Session = Depends(get_db)):
+def register(user: schemas.UserCreate, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
     existing_user = db.query(models.User).filter(models.User.username == user.username).first()
     if existing_user:
         raise HTTPException(status_code=400, detail="User already exist")
